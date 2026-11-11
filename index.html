@@ -255,9 +255,8 @@
         }
         .stock-breakdown div { margin-bottom: 4px; display: flex; justify-content: space-between; font-weight: 700;}
 
-        /* Botones de las tarjetas */
-        .product-actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
-        .product-actions-main { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; }
+        /* Proporción 3 a 1 para los botones de las tarjetas */
+        .product-actions { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; margin-top: auto; }
         .product-actions .btn { font-size: 1rem; padding: 12px; border-radius: 15px;}
         .product-actions .btn-sold { background-color: var(--logo-red); }
         .product-actions .btn-add { 
@@ -267,13 +266,6 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-        }
-        .product-actions .btn-restock {
-            background-color: var(--logo-aqua);
-            color: var(--text-dark);
-            padding: 10px;
-            font-size: 0.95rem;
-            border-radius: 12px;
         }
         
         .stock-zero { color: var(--logo-red); font-weight: 900; }
@@ -403,32 +395,37 @@
     // -----------------------------------------
     onSnapshot(puestosRef, (snapshot) => {
         currentPuestos = [];
-        updateListContainer.innerHTML = '';
+        updateListContainer.innerHTML = ''; // Limpiar lista de horas
 
         snapshot.forEach(docSnap => {
             currentPuestos.push({ id: docSnap.id, ...docSnap.data() });
         });
 
+        // Ordenar puestos alfabéticamente para mantener consistencia
         currentPuestos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         if (currentPuestos.length === 0) {
             updateListContainer.innerHTML = '<div style="color:var(--text-light); text-align:center; justify-content:center; border:none;">Sin puestos creados</div>';
         } else {
+            // Imprimir las horas de cada puesto de forma "inteligente"
             currentPuestos.forEach(p => {
                 let timeString = "--:--";
                 if (p.fecha_modificacion) {
                     const dateObj = new Date(p.fecha_modificacion.toMillis());
                     const hoy = new Date();
                     
+                    // Comprobar si la modificación fue el día de hoy
                     const esHoy = dateObj.getDate() === hoy.getDate() && 
                                   dateObj.getMonth() === hoy.getMonth() && 
                                   dateObj.getFullYear() === hoy.getFullYear();
                     
+                    // Extraer solo la hora (ej. 15:30)
                     const hora = dateObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
                     
                     if (esHoy) {
                         timeString = `Hoy, ${hora}`;
                     } else {
+                        // Si no fue hoy, extraemos también el día y el mes
                         const fecha = dateObj.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' });
                         timeString = `${fecha}, ${hora}`;
                     }
@@ -440,6 +437,7 @@
             });
         }
         
+        // Si el puesto actual fue borrado, volver a general
         if (activeTab !== 'general' && !currentPuestos.find(p => p.id === activeTab)) {
             activeTab = 'general';
         }
@@ -477,18 +475,21 @@
     function renderTabs() {
         tabsContainer.innerHTML = '';
 
+        // Pestaña General
         const btnGen = document.createElement('button');
         btnGen.className = `tab-btn ${activeTab === 'general' ? 'active' : ''}`;
         btnGen.textContent = '📦 Stock General';
         btnGen.onclick = () => { activeTab = 'general'; renderTabs(); renderInventory(); };
         tabsContainer.appendChild(btnGen);
 
+        // Pestañas de Puestos
         currentPuestos.forEach(p => {
             const btnPuesto = document.createElement('button');
             btnPuesto.className = `tab-btn ${activeTab === p.id ? 'active' : ''}`;
             btnPuesto.textContent = `🏪 ${p.nombre}`;
             btnPuesto.onclick = () => { activeTab = p.id; renderTabs(); renderInventory(); };
             
+            // Botón de eliminar puesto
             if (activeTab === p.id) {
                 const delBtn = document.createElement('div');
                 delBtn.className = 'btn-delete-puesto';
@@ -507,12 +508,14 @@
             tabsContainer.appendChild(btnPuesto);
         });
 
+        // Botón Nuevo Puesto
         const btnAdd = document.createElement('button');
         btnAdd.className = 'tab-btn tab-btn-add';
         btnAdd.textContent = '➕ Nuevo Puesto';
         btnAdd.onclick = async () => {
             const nombre = prompt('Ingresa el nombre del nuevo puesto:');
             if (nombre && nombre.trim() !== '') {
+                // Al crear un puesto, su primera fecha de modificación es el momento en que nace
                 await addDoc(puestosRef, { 
                     nombre: nombre.trim(), 
                     fecha_modificacion: serverTimestamp() 
@@ -529,6 +532,7 @@
         grid.innerHTML = '';
         let sortedProducts = [...currentProducts];
 
+        // Calcular Stock a Mostrar (Total vs Por Puesto)
         sortedProducts.forEach(prod => {
             if (activeTab === 'general') {
                 prod._displayStock = currentPuestos.reduce((total, p) => total + (prod.stock[p.id] || 0), 0);
@@ -537,6 +541,7 @@
             }
         });
 
+        // Lógica de Ordenamiento
         if (currentSort === 'precio') {
             sortedProducts.sort((a, b) => {
                 if (a._displayStock === 0 && b._displayStock !== 0) return 1;
@@ -549,6 +554,7 @@
             sortedProducts.sort((a, b) => b._displayStock - a._displayStock);
         }
 
+        // Dibujar Tarjetas
         sortedProducts.forEach((data) => {
             const stockDisplay = data._displayStock === 0 
                 ? `<b class="stock-zero">Agotado (0)</b>` 
@@ -580,11 +586,8 @@
             } else {
                 cardHtml += `
                     <div class="product-actions">
-                        <div class="product-actions-main">
-                            <button class="btn btn-sold" data-id="${data.id}">- Vendido</button>
-                            <button class="btn btn-add" data-id="${data.id}">+</button>
-                        </div>
-                        <button class="btn btn-restock" data-id="${data.id}">📦 Reponer Varios</button>
+                        <button class="btn btn-sold" data-id="${data.id}">- Vendido</button>
+                        <button class="btn btn-add" data-id="${data.id}">+</button>
                     </div>
                 </div>`;
             }
@@ -599,7 +602,7 @@
     }
 
     // -----------------------------------------
-    // 5. EVENTOS DE STOCK (+, - Vendido y Reponer)
+    // 5. EVENTOS DE STOCK (+ y - Vendido)
     // -----------------------------------------
     function asignarEventosTarjetas() {
         // Restar 1 (Vendido)
@@ -610,6 +613,7 @@
                 const currentStock = prod.stock[activeTab] || 0;
                 
                 if (currentStock > 0) {
+                    // Actualizamos stock del producto y luego la hora del puesto
                     await updateDoc(doc(db, "productos", id), {
                         [`stock.${activeTab}`]: currentStock - 1
                     });
@@ -629,35 +633,13 @@
                 const prod = currentProducts.find(p => p.id === id);
                 const currentStock = prod.stock[activeTab] || 0;
                 
+                // Actualizamos stock del producto y luego la hora del puesto
                 await updateDoc(doc(db, "productos", id), {
                     [`stock.${activeTab}`]: currentStock + 1
                 });
                 await updateDoc(doc(db, "puestos", activeTab), {
                     fecha_modificacion: serverTimestamp()
                 });
-            };
-        });
-
-        // Reponer Varios
-        document.querySelectorAll('.btn-restock').forEach(btn => {
-            btn.onclick = async (e) => {
-                const id = e.target.dataset.id;
-                const prod = currentProducts.find(p => p.id === id);
-                const currentStock = prod.stock[activeTab] || 0;
-                
-                const input = prompt(`¿Cuántas unidades de "${prod.nombre}" quieres reponer?`);
-                const qty = parseInt(input);
-                
-                if (!isNaN(qty) && qty > 0) {
-                    await updateDoc(doc(db, "productos", id), {
-                        [`stock.${activeTab}`]: currentStock + qty
-                    });
-                    await updateDoc(doc(db, "puestos", activeTab), {
-                        fecha_modificacion: serverTimestamp()
-                    });
-                } else if (input !== null) {
-                    alert('Por favor, ingresa un número válido mayor a 0.');
-                }
             };
         });
     }
