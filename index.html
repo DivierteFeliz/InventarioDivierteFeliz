@@ -250,24 +250,37 @@
             border: 2px dashed #E2E8F0;
             font-size: 0.9rem;
             margin-bottom: 10px;
-            max-height: 100px;
+            max-height: 120px;
             overflow-y: auto;
         }
-        .stock-breakdown div { margin-bottom: 4px; display: flex; justify-content: space-between; font-weight: 700;}
+        .stock-breakdown div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-weight: 700;}
 
-        /* Botones de las tarjetas actualizados a 3 opciones */
-        .product-actions { display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 8px; margin-top: auto; }
-        .product-actions .btn { font-size: 0.9rem; padding: 10px 5px; border-radius: 12px; }
+        /* Mini Botón de Reponer en Vista General */
+        .btn-restock-mini {
+            background: var(--logo-aqua);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 8px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.1s;
+        }
+        .btn-restock-mini:active { transform: scale(0.9); }
+        .btn-restock-mini:hover { filter: brightness(0.95); }
+
+        /* Botones de las tarjetas en puestos (3:1 Venta/Agregar) */
+        .product-actions { display: grid; grid-template-columns: 3fr 1fr; gap: 12px; margin-top: auto; }
+        .product-actions .btn { font-size: 1rem; padding: 12px; border-radius: 15px;}
         .product-actions .btn-sold { background-color: var(--logo-red); }
         .product-actions .btn-add { 
             background-color: var(--logo-green); 
-            font-size: 1.4rem; 
+            font-size: 1.8rem; 
+            padding: 5px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            padding: 0;
         }
-        .product-actions .btn-restock { background-color: var(--logo-aqua); color: var(--text-dark); }
         
         .stock-zero { color: var(--logo-red); font-weight: 900; }
     </style>
@@ -555,23 +568,30 @@
                     </div>`;
 
             if (activeTab === 'general') {
+                // Si es stock general, muestra el botón de reponer en cada línea del puesto
                 cardHtml += `<div class="stock-breakdown">`;
                 if (currentPuestos.length === 0) {
                     cardHtml += `<div style="color:var(--text-light);">Crea un puesto primero</div>`;
                 } else {
                     currentPuestos.forEach(p => {
                         const s = data.stock[p.id] || 0;
-                        cardHtml += `<div><span>${p.nombre}:</span> <span><b>${s}</b> unid.</span></div>`;
+                        cardHtml += `
+                            <div>
+                                <span>${p.nombre}:</span> 
+                                <span style="display:flex; align-items:center; gap:10px;">
+                                    <b>${s}</b> unid.
+                                    <button class="btn-restock-mini" data-id="${data.id}" data-puesto="${p.id}" title="Reponer cajas en ${p.nombre}">📦</button>
+                                </span>
+                            </div>`;
                     });
                 }
                 cardHtml += `</div></div>`;
             } else {
-                // Nuevo panel de botones (incluye reponer lote)
+                // Si es un puesto, muestra solo los botones de las vendedoras (3:1)
                 cardHtml += `
                     <div class="product-actions">
-                        <button class="btn btn-sold" data-id="${data.id}" title="Vender 1 unidad">- Venta</button>
-                        <button class="btn btn-add" data-id="${data.id}" title="Sumar 1 unidad">+</button>
-                        <button class="btn btn-restock" data-id="${data.id}" title="Agregar un lote de productos">📦 Reponer</button>
+                        <button class="btn btn-sold" data-id="${data.id}">- Venta</button>
+                        <button class="btn btn-add" data-id="${data.id}">+</button>
                     </div>
                 </div>`;
             }
@@ -580,9 +600,7 @@
             grid.appendChild(card);
         });
 
-        if (activeTab !== 'general') {
-            asignarEventosTarjetas();
-        }
+        asignarEventosTarjetas();
     }
 
     // -----------------------------------------
@@ -625,23 +643,25 @@
             };
         });
 
-        // Sumar Lote (Reponer)
-        document.querySelectorAll('.btn-restock').forEach(btn => {
+        // Reponer Lote (Botón 📦 exclusivo de Stock General)
+        document.querySelectorAll('.btn-restock-mini').forEach(btn => {
             btn.onclick = async (e) => {
                 const id = e.target.dataset.id;
+                const puestoId = e.target.dataset.puesto;
                 const prod = currentProducts.find(p => p.id === id);
-                const currentStock = prod.stock[activeTab] || 0;
+                const puesto = currentPuestos.find(p => p.id === puestoId);
+                const currentStock = prod.stock[puestoId] || 0;
                 
-                const cantidadInput = prompt(`¿Cuántas unidades de "${prod.nombre}" quieres agregar a este puesto?`);
+                const cantidadInput = prompt(`¿Cuántas unidades de "${prod.nombre}" ingresan a ${puesto.nombre}?`);
                 
                 if (cantidadInput !== null && cantidadInput.trim() !== '') {
                     const cantidadAgregada = parseInt(cantidadInput);
                     
                     if (!isNaN(cantidadAgregada) && cantidadAgregada > 0) {
                         await updateDoc(doc(db, "productos", id), {
-                            [`stock.${activeTab}`]: currentStock + cantidadAgregada
+                            [`stock.${puestoId}`]: currentStock + cantidadAgregada
                         });
-                        await updateDoc(doc(db, "puestos", activeTab), {
+                        await updateDoc(doc(db, "puestos", puestoId), {
                             fecha_modificacion: serverTimestamp()
                         });
                     } else {
