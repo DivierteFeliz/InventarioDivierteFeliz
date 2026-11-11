@@ -143,7 +143,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            font-size: 0.95rem;
+            font-size: 0.95rem; /* Ajustado para dar más espacio a la fecha */
             color: var(--text-dark);
             font-weight: 700;
             max-height: 150px;
@@ -291,6 +291,7 @@
         <div class="update-container">
             <h3>Últimas Modificaciones</h3>
             <div id="last-update-list">
+                <!-- Horas y fechas por puesto inyectadas aquí -->
                 <div style="color:var(--text-light); text-align:center; justify-content:center; border:none;">Cargando...</div>
             </div>
         </div>
@@ -390,37 +391,6 @@
     let currentSort = 'default';
 
     // -----------------------------------------
-    // Función Inteligente para Fechas Reforzada
-    // -----------------------------------------
-    function formatearFecha(timestampMillis) {
-        if (!timestampMillis) return "--:--"; // Por si aún no guarda
-        
-        const fechaObj = new Date(timestampMillis);
-        const hoy = new Date();
-        const ayer = new Date();
-        ayer.setDate(hoy.getDate() - 1);
-
-        // Extraer partes exactas para comparar matemáticamente y evitar errores de zona horaria
-        const diaBase = fechaObj.getDate();
-        const mesBase = fechaObj.getMonth();
-        const anioBase = fechaObj.getFullYear();
-
-        const esHoy = (diaBase === hoy.getDate() && mesBase === hoy.getMonth() && anioBase === hoy.getFullYear());
-        const esAyer = (diaBase === ayer.getDate() && mesBase === ayer.getMonth() && anioBase === ayer.getFullYear());
-
-        const horaFormat = fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-
-        if (esHoy) {
-            return `Hoy, ${horaFormat}`;
-        } else if (esAyer) {
-            return `Ayer, ${horaFormat}`;
-        } else {
-            const fechaFormat = `${String(diaBase).padStart(2, '0')}-${String(mesBase + 1).padStart(2, '0')}-${anioBase}`;
-            return `${fechaFormat} ${horaFormat}`;
-        }
-    }
-
-    // -----------------------------------------
     // 1. ESCUCHAR PUESTOS (VENTANAS Y TIEMPOS)
     // -----------------------------------------
     onSnapshot(puestosRef, (snapshot) => {
@@ -428,21 +398,28 @@
         updateListContainer.innerHTML = ''; 
 
         snapshot.forEach(docSnap => {
-            // ESTIMATE: Obliga a Firebase a calcular la hora de inmediato localmente
-            currentPuestos.push({ id: docSnap.id, ...docSnap.data({ serverTimestamps: 'estimate' }) });
+            currentPuestos.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // Ordenar puestos alfabéticamente
+        // Ordenar puestos alfabéticamente para mantener consistencia
         currentPuestos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         if (currentPuestos.length === 0) {
-            updateListContainer.innerHTML = '<div style="color:var(--text-light); text-align:center; border:none;">Sin puestos creados</div>';
+            updateListContainer.innerHTML = '<div style="color:var(--text-light); text-align:center; justify-content:center; border:none;">Sin puestos creados</div>';
         } else {
-            // Imprimir las horas de cada puesto aplicando el formato inteligente
+            // Imprimir las fechas y horas de cada puesto
             currentPuestos.forEach(p => {
-                let timeString = "--:--";
+                let timeString = "--/--/---- --:--";
                 if (p.fecha_modificacion) {
-                    timeString = formatearFecha(p.fecha_modificacion.toMillis());
+                    const dateObj = new Date(p.fecha_modificacion.toMillis());
+                    // Formato: DD-MM-YYYY, HH:MM
+                    timeString = dateObj.toLocaleString('es-CL', {
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
                 }
                 
                 const item = document.createElement('div');
@@ -470,7 +447,7 @@
         currentProducts = [];
 
         snapshot.forEach((docSnap) => {
-            const data = docSnap.data({ serverTimestamps: 'estimate' });
+            const data = docSnap.data();
             currentProducts.push({ 
                 id: docSnap.id, 
                 ...data, 
@@ -759,7 +736,6 @@
         editSelect.value = '';
     }
 
-    // Optimizador de Imagen
     function procesarImagen(file, callback) {
         const reader = new FileReader();
         reader.onload = function(e) {
