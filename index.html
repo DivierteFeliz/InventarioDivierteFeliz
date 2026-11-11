@@ -48,6 +48,33 @@
         .update-container h3 { margin: 0 0 10px 0; font-size: 1.2rem; color: var(--text-dark); }
         #last-update-time { font-size: 1.8rem; font-weight: bold; color: var(--primary); margin: 0; }
 
+        /* Controles Superiores (Ordenar y Editar) */
+        .top-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group label { margin: 0; font-weight: bold; }
+        .control-group select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #D1D5DB;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+        }
+
         /* Formulario */
         .form-container { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -63,30 +90,15 @@
         .btn-success { background-color: var(--success); }
         .btn-danger { background-color: var(--danger); }
         .btn-warning { background-color: var(--warning); }
-
-        /* Controles de Ordenamiento (Filtros) */
-        .controls-container {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            margin-bottom: 15px;
+        
+        .form-actions-grid {
+            display: grid;
+            grid-template-columns: 1fr;
             gap: 10px;
+            margin-top: 10px;
         }
-        .controls-container label {
-            margin: 0;
-            font-size: 1rem;
-        }
-        .controls-container select {
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #D1D5DB;
-            font-weight: bold;
-            color: var(--text-dark);
-            outline: none;
-            cursor: pointer;
-        }
-        .controls-container select:focus {
-            border-color: var(--primary);
+        .form-actions-grid.editing {
+            grid-template-columns: 1fr 1fr 1fr;
         }
 
         /* Cuadrícula */
@@ -98,8 +110,8 @@
         .product-info { display: flex; justify-content: space-between; margin-bottom: 15px; color: var(--text-light); }
         .product-price { font-weight: bold; color: var(--success); }
         
-        .product-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: auto; }
-        .product-actions .btn { font-size: 0.8rem; padding: 8px; }
+        .product-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+        .product-actions .btn { font-size: 0.9rem; padding: 10px; }
         
         /* Estilo para stock cero */
         .stock-zero { color: var(--danger); font-weight: bold; }
@@ -114,8 +126,28 @@
 
     <!-- Última actualización -->
     <div class="update-container">
-        <h3>Última actualización</h3>
+        <h3>Última Modificación (Base de Datos)</h3>
         <p id="last-update-time">--:--</p>
+    </div>
+
+    <!-- Controles Superiores -->
+    <div class="top-controls">
+        <div class="control-group">
+            <label for="sort-select">Ordenar por:</label>
+            <select id="sort-select">
+                <option value="default">Seleccionar...</option>
+                <option value="precio">Precio (Agotados al final)</option>
+                <option value="stock-asc">Stock: Menor a Mayor</option>
+                <option value="stock-desc">Stock: Mayor a Menor</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="edit-select" style="color: var(--warning);">✏️ Editar Producto:</label>
+            <select id="edit-select">
+                <option value="">-- Seleccionar producto para editar --</option>
+                <!-- Las opciones se inyectan por JS -->
+            </select>
+        </div>
     </div>
 
     <!-- Formulario -->
@@ -133,28 +165,21 @@
                     <input type="number" id="precio" required min="0" step="0.01">
                 </div>
                 <div class="input-group">
-                    <label>Cantidad</label>
+                    <label>Cantidad Inicial</label>
                     <input type="number" id="cantidad" required min="0">
                 </div>
                 <div class="input-group">
-                    <label>Foto del Producto</label>
+                    <label>Foto del Producto (Opcional si editas)</label>
                     <input type="file" id="foto" accept="image/*">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" id="btn-submit">Guardar Producto</button>
-            <button type="button" class="btn btn-warning" id="btn-cancel" style="display:none; width: 100%; margin-top: 10px;">Cancelar Edición</button>
+            
+            <div class="form-actions-grid" id="form-actions-container">
+                <button type="submit" class="btn btn-primary" id="btn-submit">Guardar Producto</button>
+                <button type="button" class="btn btn-warning" id="btn-cancel" style="display:none;">Cancelar Edición</button>
+                <button type="button" class="btn btn-danger" id="btn-delete" style="display:none;">Borrar Producto</button>
+            </div>
         </form>
-    </div>
-
-    <!-- Controles de Ordenamiento -->
-    <div class="controls-container">
-        <label for="sort-select">Ordenar por:</label>
-        <select id="sort-select">
-            <option value="default">Seleccionar...</option>
-            <option value="precio">Precio (Agotados al final)</option>
-            <option value="stock-asc">Stock: Menor a Mayor</option>
-            <option value="stock-desc">Stock: Mayor a Menor</option>
-        </select>
     </div>
 
     <!-- Cuadrícula -->
@@ -184,32 +209,89 @@
     const form = document.getElementById('product-form');
     const grid = document.getElementById('inventory-grid');
     const statusDiv = document.getElementById('connection-status');
-    const btnCancel = document.getElementById('btn-cancel');
     const sortSelect = document.getElementById('sort-select');
+    const editSelect = document.getElementById('edit-select');
+    
+    // Botones del formulario
+    const btnSubmit = document.getElementById('btn-submit');
+    const btnCancel = document.getElementById('btn-cancel');
+    const btnDelete = document.getElementById('btn-delete');
+    const formActionsContainer = document.getElementById('form-actions-container');
 
     let currentProducts = [];
     let currentSort = 'default';
 
-    // Escuchar el cambio en el selector de orden
+    // Ordenamiento
     sortSelect.addEventListener('change', (e) => {
         currentSort = e.target.value;
-        renderInventory(); // Re-dibujar el inventario al cambiar la opción
+        renderInventory();
     });
 
-    // Función para renderizar los productos en pantalla
+    // Selección de edición
+    editSelect.addEventListener('change', (e) => {
+        const id = e.target.value;
+        if (id) {
+            iniciarEdicion(id);
+        } else {
+            resetFormState();
+        }
+    });
+
+    // Rellenar selector de edición
+    function actualizarSelectorEdicion() {
+        // Guardamos el valor actual para no perder la selección al actualizar Firebase
+        const currentValue = editSelect.value;
+        
+        editSelect.innerHTML = '<option value="">-- Seleccionar producto para editar --</option>';
+        
+        // Ordenamos alfabéticamente solo para la lista desplegable
+        const listForSelect = [...currentProducts].sort((a, b) => a.nombre.localeCompare(b.nombre));
+        
+        listForSelect.forEach(prod => {
+            const option = document.createElement('option');
+            option.value = prod.id;
+            option.textContent = prod.nombre;
+            editSelect.appendChild(option);
+        });
+
+        // Restaurar selección si existe
+        if (currentProducts.find(p => p.id === currentValue)) {
+            editSelect.value = currentValue;
+        } else {
+            resetFormState(); // Si el producto fue borrado, limpiar formulario
+        }
+    }
+
+    function iniciarEdicion(id) {
+        const prod = currentProducts.find(p => p.id === id);
+        if (!prod) return;
+
+        document.getElementById('product-id').value = id;
+        document.getElementById('nombre').value = prod.nombre;
+        document.getElementById('precio').value = prod.precio;
+        document.getElementById('cantidad').value = prod.cantidad;
+        
+        document.getElementById('form-title').textContent = 'Modificando: ' + prod.nombre;
+        btnSubmit.textContent = 'Actualizar Cambios';
+        btnSubmit.style.backgroundColor = 'var(--warning)';
+        
+        btnCancel.style.display = 'block';
+        btnDelete.style.display = 'block';
+        formActionsContainer.classList.add('editing');
+        
+        // Forzar selector al id correcto (por si se llamó desde otro lado)
+        editSelect.value = id; 
+    }
+
+    // Dibujar Tarjetas
     function renderInventory() {
         grid.innerHTML = '';
-        
-        // Hacer una copia del arreglo para no alterar el original al ordenar
         let sortedProducts = [...currentProducts];
 
-        // Aplicar la lógica de ordenamiento
         if (currentSort === 'precio') {
             sortedProducts.sort((a, b) => {
-                // Si uno tiene stock 0 y el otro no, el de stock 0 se va al final
                 if (a.cantidad === 0 && b.cantidad !== 0) return 1;
                 if (b.cantidad === 0 && a.cantidad !== 0) return -1;
-                // Si ambos tienen stock o ambos están en 0, ordenan por precio (menor a mayor)
                 return a.precio - b.precio; 
             });
         } else if (currentSort === 'stock-asc') {
@@ -217,9 +299,7 @@
         } else if (currentSort === 'stock-desc') {
             sortedProducts.sort((a, b) => b.cantidad - a.cantidad);
         }
-        // Si es 'default', se muestran tal cual llegaron de Firebase
 
-        // Dibujar las tarjetas
         sortedProducts.forEach((data) => {
             const stockDisplay = data.cantidad === 0 
                 ? `<b class="stock-zero">Agotado (0)</b>` 
@@ -236,41 +316,53 @@
                         <span>Stock: ${stockDisplay}</span>
                     </div>
                     <div class="product-actions">
-                        <button class="btn btn-warning btn-edit" data-id="${data.id}">Editar</button>
-                        <button class="btn btn-success btn-sold" data-id="${data.id}">Vendido</button>
-                        <button class="btn btn-danger btn-del" data-id="${data.id}">Borrar</button>
+                        <button class="btn btn-danger btn-sold" data-id="${data.id}">- Vendido</button>
+                        <button class="btn btn-success btn-add" data-id="${data.id}">+ Agregar</button>
                     </div>
                 </div>
             `;
             grid.appendChild(card);
         });
 
-        // Volver a asignar la funcionalidad a los botones recién dibujados
-        asignarEventosBotones();
+        asignarEventosTarjetas();
     }
 
-    // Escuchar cambios en tiempo real desde Firebase
+    // Escuchar Firebase
     onSnapshot(inventarioRef, (snapshot) => {
         statusDiv.style.backgroundColor = 'var(--success)';
-        statusDiv.textContent = '🟢 Conectado y Sincronizado en Tiempo Real';
-        
-        // Actualizar reloj con hora y fecha
-        const now = new Date();
-        document.getElementById('last-update-time').textContent = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        statusDiv.textContent = '🟢 Conectado y Sincronizado';
         
         currentProducts = [];
+        let ultimaFechaNube = null;
 
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const id = docSnap.id;
             currentProducts.push({ id, ...data });
+
+            // Buscar la fecha más reciente guardada en Firestore
+            if (data.fecha) {
+                // Convertir el Timestamp de Firebase a milisegundos
+                const docTime = data.fecha.toMillis();
+                if (!ultimaFechaNube || docTime > ultimaFechaNube) {
+                    ultimaFechaNube = docTime;
+                }
+            }
         });
 
-        // Llamamos a renderInventory para que aplique el filtro actual y dibuje
+        // Actualizar reloj solo con la hora de la base de datos
+        if (ultimaFechaNube) {
+            const fechaReciente = new Date(ultimaFechaNube);
+            document.getElementById('last-update-time').textContent = fechaReciente.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } else {
+            document.getElementById('last-update-time').textContent = "Sin datos";
+        }
+
+        actualizarSelectorEdicion();
         renderInventory();
     });
 
-    // Redimensionar imagen para evitar saturar la base de datos
+    // Procesar Foto
     function procesarImagen(file, callback) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -291,7 +383,7 @@
         reader.readAsDataURL(file);
     }
 
-    // Enviar Formulario (Crear / Actualizar)
+    // Enviar Formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         statusDiv.style.backgroundColor = 'var(--warning)';
@@ -313,10 +405,11 @@
                 } else {
                     await addDoc(inventarioRef, productoData);
                 }
-                form.reset();
                 resetFormState();
             } catch (error) {
                 alert("Error al guardar: " + error.message);
+                statusDiv.style.backgroundColor = 'var(--danger)';
+                statusDiv.textContent = 'Error de conexión';
             }
         };
 
@@ -327,61 +420,63 @@
         }
     });
 
-    // Asignar eventos a botones generados dinámicamente
-    function asignarEventosBotones() {
-        // Botón Borrar
-        document.querySelectorAll('.btn-del').forEach(btn => {
-            btn.onclick = async (e) => {
-                if(confirm('¿Eliminar producto?')) {
-                    await deleteDoc(doc(db, "productos", e.target.dataset.id));
-                }
-            };
-        });
+    // Borrar desde el formulario
+    btnDelete.onclick = async () => {
+        const id = document.getElementById('product-id').value;
+        if (id && confirm('¿Estás seguro de eliminar este producto definitivamente de la base de datos?')) {
+            statusDiv.textContent = 'Eliminando...';
+            await deleteDoc(doc(db, "productos", id));
+            resetFormState();
+        }
+    };
 
-        // Botón Editar
-        document.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.onclick = (e) => {
-                const id = e.target.dataset.id;
-                const prod = currentProducts.find(p => p.id === id);
-                document.getElementById('product-id').value = id;
-                document.getElementById('nombre').value = prod.nombre;
-                document.getElementById('precio').value = prod.precio;
-                document.getElementById('cantidad').value = prod.cantidad;
-                
-                document.getElementById('btn-submit').textContent = 'Actualizar Producto';
-                document.getElementById('form-title').textContent = 'Modificando: ' + prod.nombre;
-                btnCancel.style.display = 'block';
-                window.scrollTo(0, 0);
-            };
-        });
-
-        // Botón Vendido (Resta 1 al stock)
+    // Eventos Tarjetas (+ y -)
+    function asignarEventosTarjetas() {
+        // Restar 1
         document.querySelectorAll('.btn-sold').forEach(btn => {
             btn.onclick = async (e) => {
                 const id = e.target.dataset.id;
                 const prod = currentProducts.find(p => p.id === id);
-                
                 if (prod.cantidad > 0) {
                     await updateDoc(doc(db, "productos", id), {
                         cantidad: prod.cantidad - 1,
                         fecha: serverTimestamp()
                     });
                 } else {
-                    alert('El producto ya está agotado (Stock 0).');
+                    alert('El producto ya está agotado.');
                 }
+            };
+        });
+
+        // Sumar 1
+        document.querySelectorAll('.btn-add').forEach(btn => {
+            btn.onclick = async (e) => {
+                const id = e.target.dataset.id;
+                const prod = currentProducts.find(p => p.id === id);
+                await updateDoc(doc(db, "productos", id), {
+                    cantidad: prod.cantidad + 1,
+                    fecha: serverTimestamp()
+                });
             };
         });
     }
 
-    // Cancelar edición
+    // Resetear Estado de Formulario
     btnCancel.onclick = resetFormState;
 
     function resetFormState() {
-        document.getElementById('product-id').value = '';
-        document.getElementById('btn-submit').textContent = 'Guardar Producto';
-        document.getElementById('form-title').textContent = 'Agregar Nuevo Producto';
-        btnCancel.style.display = 'none';
         form.reset();
+        document.getElementById('product-id').value = '';
+        document.getElementById('form-title').textContent = 'Agregar Nuevo Producto';
+        
+        btnSubmit.textContent = 'Guardar Nuevo Producto';
+        btnSubmit.style.backgroundColor = 'var(--primary)';
+        
+        btnCancel.style.display = 'none';
+        btnDelete.style.display = 'none';
+        formActionsContainer.classList.remove('editing');
+        
+        editSelect.value = '';
     }
 </script>
 </body>
