@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Colaborativo en la Nube</title>
-    <!-- SDKs de Firebase versión 8 (Compatibles con CDN directo sin Node.js) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    
+    <title>Inventario Colaborativo</title>
     <style>
         :root {
             --primary: #4F46E5;
@@ -21,111 +17,37 @@
             --text-light: #6B7280;
         }
 
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-dark); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1, h2 { color: var(--primary); text-align: center; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1, h2 {
-            color: var(--primary);
+        #connection-status {
             text-align: center;
-        }
-
-        #status-msg {
-            text-align: center;
-            font-weight: bold;
             padding: 10px;
+            background-color: var(--warning);
+            color: white;
             border-radius: 8px;
+            font-weight: bold;
             margin-bottom: 20px;
         }
-        
-        .status-error { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
-        .status-ok { background-color: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
 
-        .stats-container {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            text-align: center;
-            flex: 1;
-            min-width: 200px;
-            max-width: 300px;
-            border-bottom: 4px solid var(--primary);
-        }
-
+        /* Estadísticas */
+        .stats-container { display: flex; gap: 20px; margin-bottom: 30px; justify-content: center; flex-wrap: wrap; }
+        .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; flex: 1; min-width: 200px; border-bottom: 4px solid var(--primary); }
         .stat-card.added { border-color: var(--success); }
         .stat-card.removed { border-color: var(--danger); }
+        .stat-number { font-size: 2rem; font-weight: bold; margin: 10px 0 0 0; }
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            margin: 10px 0 0 0;
-        }
-
-        .form-container {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
+        /* Formulario */
+        .form-container { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .input-group { display: flex; flex-direction: column; }
-
-        label {
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--text-dark);
-        }
-
-        input[type="text"], input[type="number"], input[type="file"] {
-            padding: 10px;
-            border: 1px solid #D1D5DB;
-            border-radius: 8px;
-            outline: none;
-            transition: border 0.3s;
-        }
-
+        label { margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; color: var(--text-dark); }
+        input[type="text"], input[type="number"], input[type="file"] { padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; outline: none; }
         input:focus { border-color: var(--primary); }
-
-        .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            color: white;
-            transition: opacity 0.3s, transform 0.1s;
-        }
-
+        
+        .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
         .btn:active { transform: scale(0.98); }
         .btn-primary { background-color: var(--primary); margin-top: 15px; width: 100%; font-size: 1.1rem; }
         .btn-primary:hover { background-color: var(--primary-hover); }
@@ -133,76 +55,24 @@
         .btn-danger { background-color: var(--danger); }
         .btn-warning { background-color: var(--warning); }
 
-        .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .product-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s;
-        }
-
-        .product-card:hover { transform: translateY(-5px); }
-
-        .product-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            background-color: #E5E7EB;
-        }
-
-        .product-details {
-            padding: 15px;
-            flex-grow: 1;
-        }
-
-        .product-title {
-            margin: 0 0 10px 0;
-            font-size: 1.2rem;
-            color: var(--primary);
-        }
-
-        .product-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            color: var(--text-light);
-        }
-
+        /* Cuadrícula */
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .product-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .product-image { width: 100%; height: 200px; object-fit: cover; background-color: #E5E7EB; }
+        .product-details { padding: 15px; flex-grow: 1; }
+        .product-title { margin: 0 0 10px 0; font-size: 1.2rem; color: var(--primary); }
+        .product-info { display: flex; justify-content: space-between; margin-bottom: 15px; color: var(--text-light); }
         .product-price { font-weight: bold; color: var(--success); }
-
-        .product-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 5px;
-        }
-        
+        .product-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
         .product-actions .btn { font-size: 0.8rem; padding: 8px; }
-
-        .empty-state {
-            text-align: center;
-            color: var(--text-light);
-            grid-column: 1 / -1;
-            padding: 40px;
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>☁️ Inventario Sincronizado</h1>
+    <h1>📦 Inventario Colaborativo</h1>
     
-    <!-- Mensaje de estado de la conexión -->
-    <div id="status-msg" class="status-error">
-        Esperando conexión... (Si este mensaje no cambia, revisa las credenciales de Firebase en el código fuente).
-    </div>
+    <div id="connection-status">Sincronizando con la nube...</div>
 
     <!-- Estadísticas -->
     <div class="stats-container">
@@ -212,12 +82,9 @@
             <p style="font-size: 0.8rem; color: var(--text-light);">Unidades totales</p>
         </div>
         <div class="stat-card added">
-            <h3>Sumados (Histórico)</h3>
-            <p class="stat-number" id="stat-added" style="color: var(--success);">0</p>
-        </div>
-        <div class="stat-card removed">
-            <h3>Restados (Histórico)</h3>
-            <p class="stat-number" id="stat-removed" style="color: var(--danger);">0</p>
+            <h3>Movimientos Recientes</h3>
+            <p class="stat-number" id="stat-added" style="color: var(--success);">Últimos 7 días</p>
+            <p style="font-size: 0.8rem; color: var(--text-light);">Revisa consola para detalle</p>
         </div>
     </div>
 
@@ -228,119 +95,127 @@
             <input type="hidden" id="product-id">
             <div class="form-grid">
                 <div class="input-group">
-                    <label for="nombre">Nombre del Producto</label>
-                    <input type="text" id="nombre" required placeholder="Ej. Lámpara LED">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="nombre" required>
                 </div>
                 <div class="input-group">
-                    <label for="precio">Precio de Venta ($)</label>
-                    <input type="number" id="precio" required min="0" step="0.01" placeholder="Ej. 15000">
+                    <label>Precio de Venta ($)</label>
+                    <input type="number" id="precio" required min="0" step="0.01">
                 </div>
                 <div class="input-group">
-                    <label for="cantidad">Cantidad</label>
-                    <input type="number" id="cantidad" required min="0" placeholder="Ej. 10">
+                    <label>Cantidad</label>
+                    <input type="number" id="cantidad" required min="1">
                 </div>
                 <div class="input-group">
-                    <label for="foto">Foto (Se optimizará sola)</label>
+                    <label>Foto del Producto</label>
                     <input type="file" id="foto" accept="image/*">
                 </div>
             </div>
             <button type="submit" class="btn btn-primary" id="btn-submit">Guardar Producto</button>
+            <button type="button" class="btn btn-warning" id="btn-cancel" style="display:none; width: 100%; margin-top: 10px;">Cancelar Edición</button>
         </form>
     </div>
 
-    <!-- Cuadrícula de Productos -->
-    <div class="inventory-grid" id="inventory-grid">
-        <!-- Inyección dinámica -->
-    </div>
+    <!-- Cuadrícula -->
+    <div class="inventory-grid" id="inventory-grid"></div>
 </div>
 
-<script>
-    /* =======================================================================
-       1. INSTRUCCIONES PARA ACTIVAR LA NUBE (FIREBASE)
-       =======================================================================
-       Para que funcione en varios dispositivos:
-       1. Ve a https://console.firebase.google.com/
-       2. Crea un proyecto nuevo.
-       3. En el panel izquierdo, ve a "Firestore Database" y dale a "Crear base de datos" (iníciala en "Modo de prueba").
-       4. Ve al ícono de engranaje ⚙️ (Configuración del proyecto) -> General.
-       5. Abajo, en "Tus apps", haz clic en el ícono de web (</>).
-       6. Registra la app y copia el bloque de código que dice "firebaseConfig".
-       7. Pega esos valores EXACTOS aquí abajo reemplazando "TU_API_KEY", etc.
-    ========================================================================== */
+<!-- Firebase SDK -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // =========================================================================
+    // ⚠️ REEMPLAZA ESTO CON LOS DATOS DE TU PROYECTO FIREBASE (Paso 6) ⚠️
+    // =========================================================================
     const firebaseConfig = {
-        apiKey: "TU_API_KEY",
-        authDomain: "TU_PROYECTO.firebaseapp.com",
-        projectId: "TU_PROYECTO",
-        storageBucket: "TU_PROYECTO.appspot.com",
-        messagingSenderId: "TU_SENDER_ID",
+        apiKey: "TU_API_KEY_AQUI",
+        authDomain: "tu-proyecto.firebaseapp.com",
+        projectId: "tu-proyecto",
+        storageBucket: "tu-proyecto.appspot.com",
+        messagingSenderId: "TUS_NUMEROS",
         appId: "TU_APP_ID"
     };
 
     // Inicializar Firebase
-    let db;
-    let inventory = [];
-    const statusMsg = document.getElementById('status-msg');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const inventarioRef = collection(db, "productos");
 
-    if (firebaseConfig.apiKey === "TU_API_KEY") {
-        statusMsg.innerHTML = "⚠️ <b>Falta configurar Firebase:</b> Debes reemplazar las variables 'TU_API_KEY' en el código HTML con las de tu proyecto en Firebase Console para que la nube funcione.";
-    } else {
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            statusMsg.innerHTML = "🟢 Conectado a la nube y sincronizando en tiempo real";
-            statusMsg.className = "status-ok";
-            iniciarSincronizacion();
-        } catch (error) {
-            statusMsg.innerHTML = "🔴 Error de conexión a la nube: " + error.message;
-            console.error(error);
-        }
-    }
-
-    // Referencias DOM
+    // Referencias del DOM
     const form = document.getElementById('product-form');
     const grid = document.getElementById('inventory-grid');
-    const btnSubmit = document.getElementById('btn-submit');
-    const formTitle = document.getElementById('form-title');
+    const statusDiv = document.getElementById('connection-status');
+    const btnCancel = document.getElementById('btn-cancel');
 
-    // Función para comprimir imágenes antes de subir a Firestore
-    function comprimirImagen(file, callback) {
+    let currentProducts = [];
+
+    // Escuchar cambios en tiempo real
+    onSnapshot(inventarioRef, (snapshot) => {
+        statusDiv.style.backgroundColor = 'var(--success)';
+        statusDiv.textContent = '🟢 Conectado y Sincronizado en Tiempo Real';
+        
+        currentProducts = [];
+        let totalItems = 0;
+        grid.innerHTML = '';
+
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            currentProducts.push({ id, ...data });
+            totalItems += data.cantidad;
+
+            // Renderizar producto
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <img src="${data.foto || 'https://via.placeholder.com/250x200?text=Sin+Imagen'}" class="product-image">
+                <div class="product-details">
+                    <h3 class="product-title">${data.nombre}</h3>
+                    <div class="product-info">
+                        <span class="product-price">$${data.precio.toLocaleString('es-CL')}</span>
+                        <span>Stock: <b>${data.cantidad}</b></span>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn btn-warning btn-edit" data-id="${id}">Editar</button>
+                        <button class="btn btn-success btn-dup" data-id="${id}">Duplicar</button>
+                        <button class="btn btn-danger btn-del" data-id="${id}">Borrar</button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        document.getElementById('stat-total').textContent = totalItems;
+        asignarEventosBotones();
+    });
+
+    // Redimensionar imagen para evitar saturar la base de datos
+    function procesarImagen(file, callback) {
         const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = function(event) {
+        reader.onload = function(e) {
             const img = new Image();
-            img.src = event.target.result;
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // Reducimos tamaño para que cargue rápido en la nube
+                const MAX_WIDTH = 400;
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
+                
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                callback(canvas.toDataURL('image/jpeg', 0.7)); // 70% calidad
+                callback(canvas.toDataURL('image/jpeg', 0.7));
             }
+            img.src = e.target.result;
         }
+        reader.readAsDataURL(file);
     }
 
-    // Sincronización en tiempo real con Firestore
-    function iniciarSincronizacion() {
-        db.collection("productos").onSnapshot((querySnapshot) => {
-            inventory = [];
-            querySnapshot.forEach((doc) => {
-                inventory.push({ firebaseId: doc.id, ...doc.data() });
-            });
-            renderInventory();
-            actualizarEstadisticas();
-        });
-    }
-
-    // Guardar / Actualizar
-    form.addEventListener('submit', function(e) {
+    // Enviar Formulario (Crear / Actualizar)
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!db) {
-            alert("Debes configurar Firebase primero."); return;
-        }
+        statusDiv.style.backgroundColor = 'var(--warning)';
+        statusDiv.textContent = 'Guardando en la nube...';
 
         const id = document.getElementById('product-id').value;
         const nombre = document.getElementById('nombre').value;
@@ -348,144 +223,81 @@
         const cantidad = parseInt(document.getElementById('cantidad').value);
         const fotoFile = document.getElementById('foto').files[0];
 
-        btnSubmit.textContent = 'Subiendo a la nube...';
-        btnSubmit.disabled = true;
+        const guardarDatos = async (fotoData) => {
+            const productoData = { nombre, precio, cantidad, fecha: serverTimestamp() };
+            if (fotoData) productoData.foto = fotoData;
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "productos", id), productoData);
+                } else {
+                    await addDoc(inventarioRef, productoData);
+                }
+                form.reset();
+                resetFormState();
+            } catch (error) {
+                alert("Error al guardar: " + error.message);
+            }
+        };
 
         if (fotoFile) {
-            comprimirImagen(fotoFile, function(fotoData) {
-                enviarABaseDeDatos(id, nombre, precio, cantidad, fotoData);
-            });
+            procesarImagen(fotoFile, guardarDatos);
         } else {
-            const existingProduct = inventory.find(p => p.firebaseId === id);
-            const fotoData = existingProduct ? existingProduct.foto : 'https://via.placeholder.com/400x300?text=Sin+Imagen';
-            enviarABaseDeDatos(id, nombre, precio, cantidad, fotoData);
+            guardarDatos(null);
         }
     });
 
-    function enviarABaseDeDatos(id, nombre, precio, cantidad, foto) {
-        const productoData = {
-            nombre: nombre,
-            precio: precio,
-            cantidad: cantidad,
-            foto: foto,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
+    // Asignar eventos a botones generados dinámicamente
+    function asignarEventosBotones() {
+        document.querySelectorAll('.btn-del').forEach(btn => {
+            btn.onclick = async (e) => {
+                if(confirm('¿Eliminar producto?')) {
+                    await deleteDoc(doc(db, "productos", e.target.dataset.id));
+                }
+            };
+        });
 
-        if (id) {
-            // Registrar cambio para estadísticas antes de actualizar
-            const oldProduct = inventory.find(p => p.firebaseId === id);
-            const diff = cantidad - oldProduct.cantidad;
-            if (diff !== 0) registrarMovimiento(diff > 0 ? 'suma' : 'resta', Math.abs(diff));
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.onclick = (e) => {
+                const id = e.target.dataset.id;
+                const prod = currentProducts.find(p => p.id === id);
+                document.getElementById('product-id').value = id;
+                document.getElementById('nombre').value = prod.nombre;
+                document.getElementById('precio').value = prod.precio;
+                document.getElementById('cantidad').value = prod.cantidad;
+                
+                document.getElementById('btn-submit').textContent = 'Actualizar Producto';
+                document.getElementById('form-title').textContent = 'Modificando: ' + prod.nombre;
+                btnCancel.style.display = 'block';
+                window.scrollTo(0, 0);
+            };
+        });
 
-            db.collection("productos").doc(id).update(productoData).then(resetForm);
-        } else {
-            registrarMovimiento('suma', cantidad);
-            db.collection("productos").add(productoData).then(resetForm);
-        }
+        document.querySelectorAll('.btn-dup').forEach(btn => {
+            btn.onclick = async (e) => {
+                const id = e.target.dataset.id;
+                const prod = currentProducts.find(p => p.id === id);
+                await addDoc(inventarioRef, {
+                    nombre: prod.nombre + ' (Copia)',
+                    precio: prod.precio,
+                    cantidad: prod.cantidad,
+                    foto: prod.foto,
+                    fecha: serverTimestamp()
+                });
+            };
+        });
     }
 
-    function resetForm() {
-        form.reset();
+    // Cancelar edición
+    btnCancel.onclick = resetFormState;
+
+    function resetFormState() {
         document.getElementById('product-id').value = '';
-        btnSubmit.textContent = 'Guardar Producto';
-        btnSubmit.disabled = false;
-        btnSubmit.style.backgroundColor = 'var(--primary)';
-        formTitle.textContent = 'Agregar Nuevo Producto';
-    }
-
-    // Acciones de Botones
-    window.eliminarProducto = function(id) {
-        if(confirm('¿Seguro que deseas eliminar este producto en todos los dispositivos?')) {
-            const product = inventory.find(p => p.firebaseId === id);
-            registrarMovimiento('resta', product.cantidad);
-            db.collection("productos").doc(id).delete();
-        }
-    }
-
-    window.editarProducto = function(id) {
-        const product = inventory.find(p => p.firebaseId === id);
-        document.getElementById('product-id').value = product.firebaseId;
-        document.getElementById('nombre').value = product.nombre;
-        document.getElementById('precio').value = product.precio;
-        document.getElementById('cantidad').value = product.cantidad;
-        
-        btnSubmit.textContent = 'Actualizar en la Nube';
-        btnSubmit.style.backgroundColor = 'var(--warning)';
-        formTitle.textContent = 'Modificando: ' + product.nombre;
-        window.scrollTo(0, 0);
-    }
-
-    window.duplicarProducto = function(id) {
-        const product = inventory.find(p => p.firebaseId === id);
-        registrarMovimiento('suma', product.cantidad);
-        db.collection("productos").add({
-            nombre: product.nombre + ' (Copia)',
-            precio: product.precio,
-            cantidad: product.cantidad,
-            foto: product.foto,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
-
-    // Sistema básico de Estadísticas alojado en Firestore
-    function registrarMovimiento(tipo, cantidad) {
-        if(!db) return;
-        db.collection("estadisticas").add({
-            tipo: tipo,
-            cantidad: cantidad,
-            fecha: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
-
-    function actualizarEstadisticas() {
-        if(!db) return;
-        let totalItems = 0;
-        inventory.forEach(p => totalItems += p.cantidad);
-        document.getElementById('stat-total').textContent = totalItems;
-
-        db.collection("estadisticas").get().then((querySnapshot) => {
-            let sumados = 0;
-            let restados = 0;
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                if(data.tipo === 'suma') sumados += data.cantidad;
-                if(data.tipo === 'resta') restados += data.cantidad;
-            });
-            document.getElementById('stat-added').textContent = sumados;
-            document.getElementById('stat-removed').textContent = restados;
-        });
-    }
-
-    // Renderizar Cuadrícula
-    function renderInventory() {
-        grid.innerHTML = '';
-        if (inventory.length === 0) {
-            grid.innerHTML = '<div class="empty-state">Inventario vacío o cargando desde la nube...</div>';
-            return;
-        }
-
-        inventory.forEach(product => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <img src="${product.foto}" alt="${product.nombre}" class="product-image">
-                <div class="product-details">
-                    <h3 class="product-title">${product.nombre}</h3>
-                    <div class="product-info">
-                        <span class="product-price">$${product.precio.toLocaleString('es-CL')}</span>
-                        <span>Stock: <b>${product.cantidad}</b></span>
-                    </div>
-                    <div class="product-actions">
-                        <button type="button" class="btn btn-warning" onclick="editarProducto('${product.firebaseId}')">Editar</button>
-                        <button type="button" class="btn btn-success" onclick="duplicarProducto('${product.firebaseId}')">Duplicar</button>
-                        <button type="button" class="btn btn-danger" onclick="eliminarProducto('${product.firebaseId}')">Borrar</button>
-                    </div>
-                </div>
-            `;
-            grid.appendChild(card);
-        });
+        document.getElementById('btn-submit').textContent = 'Guardar Producto';
+        document.getElementById('form-title').textContent = 'Agregar Nuevo Producto';
+        btnCancel.style.display = 'none';
+        form.reset();
     }
 </script>
-
 </body>
 </html>
