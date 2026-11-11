@@ -110,8 +110,10 @@
         .product-info { display: flex; justify-content: space-between; margin-bottom: 15px; color: var(--text-light); }
         .product-price { font-weight: bold; color: var(--success); }
         
-        .product-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+        /* Proporción 3 a 1 para los botones de las tarjetas */
+        .product-actions { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-top: auto; }
         .product-actions .btn { font-size: 0.9rem; padding: 10px; }
+        .product-actions .btn-add { font-size: 1.4rem; padding: 5px; display: flex; align-items: center; justify-content: center; }
         
         /* Estilo para stock cero */
         .stock-zero { color: var(--danger); font-weight: bold; }
@@ -239,12 +241,10 @@
 
     // Rellenar selector de edición
     function actualizarSelectorEdicion() {
-        // Guardamos el valor actual para no perder la selección al actualizar Firebase
         const currentValue = editSelect.value;
         
         editSelect.innerHTML = '<option value="">-- Seleccionar producto para editar --</option>';
         
-        // Ordenamos alfabéticamente solo para la lista desplegable
         const listForSelect = [...currentProducts].sort((a, b) => a.nombre.localeCompare(b.nombre));
         
         listForSelect.forEach(prod => {
@@ -254,11 +254,10 @@
             editSelect.appendChild(option);
         });
 
-        // Restaurar selección si existe
         if (currentProducts.find(p => p.id === currentValue)) {
             editSelect.value = currentValue;
         } else {
-            resetFormState(); // Si el producto fue borrado, limpiar formulario
+            resetFormState(); 
         }
     }
 
@@ -279,7 +278,6 @@
         btnDelete.style.display = 'block';
         formActionsContainer.classList.add('editing');
         
-        // Forzar selector al id correcto (por si se llamó desde otro lado)
         editSelect.value = id; 
     }
 
@@ -317,7 +315,7 @@
                     </div>
                     <div class="product-actions">
                         <button class="btn btn-danger btn-sold" data-id="${data.id}">- Vendido</button>
-                        <button class="btn btn-success btn-add" data-id="${data.id}">+ Agregar</button>
+                        <button class="btn btn-success btn-add" data-id="${data.id}">+</button>
                     </div>
                 </div>
             `;
@@ -340,9 +338,7 @@
             const id = docSnap.id;
             currentProducts.push({ id, ...data });
 
-            // Buscar la fecha más reciente guardada en Firestore
             if (data.fecha) {
-                // Convertir el Timestamp de Firebase a milisegundos
                 const docTime = data.fecha.toMillis();
                 if (!ultimaFechaNube || docTime > ultimaFechaNube) {
                     ultimaFechaNube = docTime;
@@ -350,7 +346,6 @@
             }
         });
 
-        // Actualizar reloj solo con la hora de la base de datos
         if (ultimaFechaNube) {
             const fechaReciente = new Date(ultimaFechaNube);
             document.getElementById('last-update-time').textContent = fechaReciente.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
